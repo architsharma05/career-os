@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: careeros-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: careeros
+      POSTGRES_PASSWORD: careeros
+      POSTGRES_DB: careeros
+    ports:
+      - "5433:5432"
+    volumes:
+      - careeros-postgres:/var/lib/postgresql/data
+
+volumes:
+  careeros-postgres:
