@@ -6,10 +6,15 @@ import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatShortDate, jsonList } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
 import { deleteJob } from "@/server/actions/jobs";
+import { createNote } from "@/server/actions/notes";
+import { createReminder } from "@/server/actions/reminders";
 import { getDemoUser } from "@/server/demo-user";
 
 export const dynamic = "force-dynamic";
@@ -27,13 +32,15 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       company: true,
       applications: {
         include: { searchProfile: true },
-        orderBy: { updatedAt: "desc" }
+        orderBy: { updatedAt: "desc" },
       },
       matches: {
         include: { searchProfile: true },
-        orderBy: { matchScore: "desc" }
-      }
-    }
+        orderBy: { matchScore: "desc" },
+      },
+      notes: { orderBy: { createdAt: "desc" } },
+      reminders: { orderBy: { dueDate: "asc" } },
+    },
   });
 
   if (!job) {
@@ -78,7 +85,41 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{job.description}</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                {job.description}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Notes</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <form action={createNote} className="space-y-3">
+                <input name="jobId" type="hidden" value={job.id} />
+                <Textarea
+                  name="content"
+                  required
+                  placeholder="Add interview, recruiter, or application context."
+                />
+                <Button type="submit" variant="secondary">
+                  Add note
+                </Button>
+              </form>
+              <div className="space-y-2">
+                {job.notes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No notes yet.</p>
+                ) : null}
+                {job.notes.map((note) => (
+                  <div
+                    key={note.id}
+                    className="rounded-lg border p-3 text-sm leading-6 text-muted-foreground"
+                  >
+                    {note.content}
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
 
@@ -127,10 +168,17 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
               </div>
               <div className="flex justify-between gap-3">
                 <span className="text-muted-foreground">Deadline</span>
-                <span className="text-right font-medium">{formatShortDate(job.deadline)}</span>
+                <span className="text-right font-medium">
+                  {formatShortDate(job.deadline)}
+                </span>
               </div>
               {job.url ? (
-                <a className="inline-flex items-center gap-2 text-primary hover:underline" href={job.url} rel="noreferrer" target="_blank">
+                <a
+                  className="inline-flex items-center gap-2 text-primary hover:underline"
+                  href={job.url}
+                  rel="noreferrer"
+                  target="_blank"
+                >
                   Open posting
                   <ExternalLink className="h-3.5 w-3.5" />
                 </a>
@@ -144,18 +192,56 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
             </CardHeader>
             <CardContent className="space-y-3">
               {job.matches.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No match scores yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  No match scores yet.
+                </p>
               ) : (
                 job.matches.map((match) => (
                   <div key={match.id} className="rounded-lg border p-3">
                     <div className="flex items-center justify-between gap-3">
-                      <p className="text-sm font-medium">{match.searchProfile.name}</p>
-                      <Badge tone={match.matchScore >= 85 ? "green" : "amber"}>{match.matchScore}%</Badge>
+                      <p className="text-sm font-medium">
+                        {match.searchProfile.name}
+                      </p>
+                      <Badge tone={match.matchScore >= 85 ? "green" : "amber"}>
+                        {match.matchScore}%
+                      </Badge>
                     </div>
-                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{match.reasonSummary}</p>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">
+                      {match.reasonSummary}
+                    </p>
                   </div>
                 ))
               )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>New Reminder</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form action={createReminder} className="space-y-3">
+                <input name="jobId" type="hidden" value={job.id} />
+                <Field label="Title">
+                  <Input
+                    name="title"
+                    required
+                    placeholder="Follow up after applying"
+                  />
+                </Field>
+                <Field label="Type">
+                  <Input name="type" required defaultValue="follow up" />
+                </Field>
+                <Field label="Due date">
+                  <Input name="dueDate" required type="date" />
+                </Field>
+                <Field label="Description">
+                  <Textarea name="description" placeholder="Optional context" />
+                </Field>
+                <Button type="submit" variant="secondary">
+                  Create reminder
+                </Button>
+              </form>
             </CardContent>
           </Card>
 
