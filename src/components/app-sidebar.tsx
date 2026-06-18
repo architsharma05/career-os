@@ -30,9 +30,9 @@ const nav = [
   { label: "Pipeline", icon: ListChecks, href: "/pipeline" },
   { label: "Applications", icon: ClipboardCheck, href: "/applications" },
   { label: "Reminders", icon: Bell, href: "/reminders" },
-  { label: "AI Assistant", icon: Sparkles, href: "#", disabled: true },
-  { label: "Analytics", icon: BarChart3, href: "#", disabled: true },
-  { label: "Settings", icon: Settings, href: "#", disabled: true },
+  { label: "AI Assistant", icon: Sparkles, href: "/ai" },
+  { label: "Analytics", icon: BarChart3, href: "/analytics" },
+  { label: "Settings", icon: Settings, href: "/settings" },
 ];
 
 export function AppSidebar() {

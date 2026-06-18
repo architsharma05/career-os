@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BriefcaseBusiness, Plus } from "lucide-react";
+import { BriefcaseBusiness, Plus, Search } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
 import { PageShell } from "@/components/page-shell";
@@ -11,27 +11,49 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { formatCurrency, formatShortDate } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import { applicationStages } from "@/lib/pipeline";
 import { quickAddJob } from "@/server/actions/jobs";
 import { getDemoUser } from "@/server/demo-user";
 
 export const dynamic = "force-dynamic";
 
-export default async function JobsPage() {
+type JobsPageProps = {
+  searchParams?: Promise<{ q?: string; status?: string }>;
+};
+
+export default async function JobsPage({ searchParams }: JobsPageProps) {
+  const params = await searchParams;
+  const query = params?.q?.trim() ?? "";
+  const status = params?.status?.trim() ?? "";
   const user = await getDemoUser();
   const jobs = await prisma.job.findMany({
-    where: { userId: user.id },
+    where: {
+      userId: user.id,
+      ...(query
+        ? {
+            OR: [
+              { title: { contains: query, mode: "insensitive" } },
+              { location: { contains: query, mode: "insensitive" } },
+              { company: { name: { contains: query, mode: "insensitive" } } },
+            ],
+          }
+        : {}),
+      ...(status
+        ? { applications: { some: { status: status as never } } }
+        : {}),
+    },
     include: {
       company: true,
       applications: {
         orderBy: { updatedAt: "desc" },
-        take: 1
+        take: 1,
       },
       matches: {
         orderBy: { matchScore: "desc" },
-        take: 1
-      }
+        take: 1,
+      },
     },
-    orderBy: { updatedAt: "desc" }
+    orderBy: { updatedAt: "desc" },
   });
 
   return (
@@ -54,17 +76,47 @@ export default async function JobsPage() {
       <div className="grid gap-6 px-5 py-6 lg:px-8 xl:grid-cols-[1fr_360px]">
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BriefcaseBusiness className="h-4 w-4 text-primary" />
-              Job Inbox
-            </CardTitle>
+            <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <BriefcaseBusiness className="h-4 w-4 text-primary" />
+                Job Inbox
+              </CardTitle>
+              <form className="flex flex-col gap-2 sm:flex-row" action="/jobs">
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    className="pl-9 sm:w-64"
+                    defaultValue={query}
+                    name="q"
+                    placeholder="Search roles, companies, locations"
+                  />
+                </div>
+                <select
+                  className="h-10 rounded-md border bg-background px-3 text-sm"
+                  defaultValue={status}
+                  name="status"
+                >
+                  <option value="">All statuses</option>
+                  {applicationStages.map((stage) => (
+                    <option key={stage.value} value={stage.value}>
+                      {stage.label}
+                    </option>
+                  ))}
+                </select>
+                <Button type="submit" variant="secondary">
+                  Filter
+                </Button>
+              </form>
+            </div>
           </CardHeader>
           <CardContent>
             {jobs.length === 0 ? (
               <div className="rounded-lg border border-dashed p-8 text-center">
                 <p className="font-medium">No jobs yet</p>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Add your first role manually, then score it against a Search Profile.
+                  {query || status
+                    ? "No jobs match the current filters. Try clearing search or status."
+                    : "Add your first role manually, then score it against a Search Profile."}
                 </p>
               </div>
             ) : (
@@ -93,22 +145,44 @@ export default async function JobsPage() {
                         return (
                           <tr key={job.id} className="hover:bg-muted/40">
                             <td className="px-4 py-3">
-                              <Link className="font-medium hover:text-primary" href={`/jobs/${job.id}`}>
+                              <Link
+                                className="font-medium hover:text-primary"
+                                href={`/jobs/${job.id}`}
+                              >
                                 {job.title}
                               </Link>
-                              <p className="text-xs text-muted-foreground">{job.location ?? "Location not set"}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {job.location ?? "Location not set"}
+                              </p>
                             </td>
                             <td className="px-4 py-3 text-muted-foreground">
                               {job.company?.name ?? "No company"}
                             </td>
                             <td className="px-4 py-3">
-                              <Badge tone="neutral">{application?.status.replaceAll("_", " ") ?? "SAVED"}</Badge>
+                              <Badge tone="neutral">
+                                {application?.status.replaceAll("_", " ") ??
+                                  "SAVED"}
+                              </Badge>
                             </td>
                             <td className="px-4 py-3">
-                              {match ? <Badge tone={match.matchScore >= 85 ? "green" : "amber"}>{match.matchScore}%</Badge> : <Badge>Unscored</Badge>}
+                              {match ? (
+                                <Badge
+                                  tone={
+                                    match.matchScore >= 85 ? "green" : "amber"
+                                  }
+                                >
+                                  {match.matchScore}%
+                                </Badge>
+                              ) : (
+                                <Badge>Unscored</Badge>
+                              )}
                             </td>
-                            <td className="px-4 py-3 text-muted-foreground">{salary}</td>
-                            <td className="px-4 py-3 text-muted-foreground">{formatShortDate(job.deadline)}</td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {salary}
+                            </td>
+                            <td className="px-4 py-3 text-muted-foreground">
+                              {formatShortDate(job.deadline)}
+                            </td>
                           </tr>
                         );
                       })}
@@ -127,16 +201,28 @@ export default async function JobsPage() {
           <CardContent>
             <form action={quickAddJob} className="space-y-4">
               <Field label="Role title">
-                <Input name="title" required placeholder="Forward Deployed Engineer" />
+                <Input
+                  name="title"
+                  required
+                  placeholder="Forward Deployed Engineer"
+                />
               </Field>
               <Field label="Location">
                 <Input name="location" placeholder="Remote" />
               </Field>
               <Field label="Notes or pasted snippet">
-                <Textarea name="description" placeholder="Short role context for now." />
+                <Textarea
+                  name="description"
+                  placeholder="Short role context for now."
+                />
               </Field>
               <label className="flex items-center gap-2 text-sm font-medium">
-                <input className="h-4 w-4 accent-primary" defaultChecked name="createApplication" type="checkbox" />
+                <input
+                  className="h-4 w-4 accent-primary"
+                  defaultChecked
+                  name="createApplication"
+                  type="checkbox"
+                />
                 Add to saved pipeline
               </label>
               <Button type="submit">Add job</Button>

@@ -12,6 +12,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency, formatShortDate, jsonList } from "@/lib/utils";
 import { prisma } from "@/lib/prisma";
+import {
+  generateDraftWithAi,
+  generateInterviewPrepWithAi,
+  scoreJobWithAi,
+} from "@/server/actions/ai";
 import { deleteJob } from "@/server/actions/jobs";
 import { createNote } from "@/server/actions/notes";
 import { createReminder } from "@/server/actions/reminders";
@@ -40,12 +45,18 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
       },
       notes: { orderBy: { createdAt: "desc" } },
       reminders: { orderBy: { dueDate: "asc" } },
+      drafts: { orderBy: { createdAt: "desc" } },
     },
   });
 
   if (!job) {
     notFound();
   }
+
+  const searchProfiles = await prisma.searchProfile.findMany({
+    where: { userId: user.id },
+    orderBy: [{ isActive: "desc" }, { name: "asc" }],
+  });
 
   const salary =
     job.salaryMin && job.salaryMax
@@ -188,6 +199,62 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
 
           <Card>
             <CardHeader>
+              <CardTitle>AI Actions</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <form
+                action={scoreJobWithAi}
+                className="space-y-3 rounded-lg border p-3"
+              >
+                <input name="jobId" type="hidden" value={job.id} />
+                <Field label="Search profile">
+                  <select
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    name="searchProfileId"
+                    defaultValue={
+                      searchProfiles.find((profile) => profile.isActive)?.id ??
+                      searchProfiles[0]?.id
+                    }
+                  >
+                    {searchProfiles.map((profile) => (
+                      <option key={profile.id} value={profile.id}>
+                        {profile.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+                <Button className="w-full" type="submit">
+                  Score job match
+                </Button>
+              </form>
+              <form
+                action={generateDraftWithAi}
+                className="grid gap-2 sm:grid-cols-2"
+              >
+                <input name="jobId" type="hidden" value={job.id} />
+                <input name="draftType" type="hidden" value="outreach" />
+                <Button type="submit" variant="secondary">
+                  Generate outreach
+                </Button>
+              </form>
+              <form action={generateDraftWithAi}>
+                <input name="jobId" type="hidden" value={job.id} />
+                <input name="draftType" type="hidden" value="cover_letter" />
+                <Button className="w-full" type="submit" variant="secondary">
+                  Generate cover letter
+                </Button>
+              </form>
+              <form action={generateInterviewPrepWithAi}>
+                <input name="jobId" type="hidden" value={job.id} />
+                <Button className="w-full" type="submit" variant="secondary">
+                  Generate interview prep
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>AI Match Scores</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -242,6 +309,32 @@ export default async function JobDetailPage({ params }: JobDetailPageProps) {
                   Create reminder
                 </Button>
               </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Generated Drafts</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {job.drafts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No AI drafts yet. Generate one above; every draft is
+                  review-only.
+                </p>
+              ) : (
+                job.drafts.map((draft) => (
+                  <div key={draft.id} className="rounded-lg border p-3">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">{draft.title}</p>
+                      <Badge tone="blue">{draft.type}</Badge>
+                    </div>
+                    <pre className="whitespace-pre-wrap text-xs leading-5 text-muted-foreground">
+                      {draft.content}
+                    </pre>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
 

@@ -29,3 +29,31 @@ export type RoleRecommendation = {
   missing_skills: string[];
   suggested_next_steps: string[];
 };
+
+export type GeneratedDraftResult = {
+  title: string;
+  content: string;
+  review_notes: string[];
+};
+
+export type InterviewPrep = {
+  company_summary_placeholder: string;
+  likely_technical_questions: string[];
+  likely_behavioral_questions: string[];
+  role_specific_preparation_topics: string[];
+  star_story_suggestions: string[];
+  questions_to_ask_interviewer: string[];
+};
+
+export type AiJobInput = {
+  resumeText: string;
+  searchProfile: string;
+  jobDescription: string;
+  jobTitle: string;
+  companyName?: string | null;
+};
+
+export type AiDraftInput = AiJobInput & {
+  draftType: "outreach" | "cover_letter";
+  contactName?: string | null;
+};
