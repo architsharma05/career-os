@@ -17,12 +17,14 @@ The MVP prioritizes demo mode and core functionality over complex authentication
 - Seeded demo workspace with realistic fake jobs, companies, contacts, reminders, applications, and drafts
 - Resume profile and Search Profile data model
 - Role Template library for common job targets
-- Job inbox with AI match score badges
+- Job inbox with AI match score badges, search, and status filters
+- Analytics page with pipeline distribution, response rate, reminder risk, top matches, and target-company focus
 - Prisma-backed CRUD pages for jobs, companies, contacts, and Search Profiles
 - Detail and edit pages for core CRM records
 - Active Search Profile switching through server actions
 - CRM pipeline stages from Saved through Offer, Rejected, and Archived
-- Mock AI service layer for job scoring and role recommendations
+- Mock AI service layer for job scoring, role recommendations, drafts, and interview prep
+- Optional OpenAI structured JSON provider behind the same service boundary
 - PostgreSQL-ready Prisma schema
 - Ethical human-in-the-loop design: no LinkedIn scraping, no CAPTCHA bypassing, no auto-apply
 
@@ -43,7 +45,9 @@ src/app              Next.js app routes and layouts
 src/components       Reusable dashboard and UI components
 src/lib              Demo data, utilities, shared constants
 src/server/actions   Server actions for Phase 2 CRUD workflows
-src/server/ai        AI provider boundary, mock outputs, structured types
+src/server/ai        AI provider boundary, mock outputs, OpenAI fetch integration, structured types
+src/server/connectors Future-safe connector scaffolding for RSS/API/email/manual-save imports
+docs                Phase notes and connector architecture references
 prisma               PostgreSQL schema and seed script
 ```
 
@@ -111,12 +115,13 @@ Open `http://localhost:3000`.
 
 - `DATABASE_URL`: PostgreSQL connection string
 - `OPENAI_API_KEY`: optional; when absent, CareerOS uses mock AI mode
+- `OPENAI_MODEL`: optional OpenAI model override for real AI mode
 - `NEXTAUTH_SECRET`: reserved for later auth
 - `NEXTAUTH_URL`: reserved for later auth
 
 ## AI Mock Mode
 
-CareerOS currently uses deterministic mock AI outputs so the app works without an API key. The mock provider returns structured job match scoring and role recommendations. The OpenAI provider will be added behind the same service boundary in a later phase.
+CareerOS uses deterministic mock AI outputs when `OPENAI_API_KEY` is not set, so the app works without secrets. When a valid key is provided, the AI service switches to the OpenAI Responses API and requests structured JSON for job scoring, role recommendations, outreach/cover-letter drafts, and interview prep. All generated outputs are persisted for review and auditability.
 
 ## Ethical Use Note
 
@@ -132,9 +137,9 @@ Screenshots will be added after the first verified UI pass.
 - Phase 2: CRUD for jobs, companies, contacts, and Search Profiles
 - Phase 3: Application pipeline with status movement
 - Phase 4: Mock AI workflows for scoring, drafts, cover letters, and interview prep
-- Phase 5: OpenAI structured-output integration
-- Phase 6: Analytics, filters, responsive polish, and demo screenshots
-- Phase 7: Optional Gmail, calendar, browser extension/manual save, public API/RSS connectors, pgvector
+- Phase 5: OpenAI structured-output integration — complete
+- Phase 6: Analytics, filters, responsive polish, and demo screenshots placeholder — complete
+- Phase 7: Optional Gmail, calendar, browser extension/manual save, public API/RSS connectors, pgvector — connector architecture scaffolded
 
 ## Skills Demonstrated
 

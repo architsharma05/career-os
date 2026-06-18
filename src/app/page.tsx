@@ -4,7 +4,7 @@ import {
   BriefcaseBusiness,
   ClipboardCheck,
   Search,
-  Trophy
+  Trophy,
 } from "lucide-react";
 
 import { AppMobileNav, AppSidebar } from "@/components/app-sidebar";
@@ -16,17 +16,22 @@ import { StatCard } from "@/components/stat-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { companies, contacts, demoUser, jobs, reminders, roleTemplates } from "@/lib/demo-data";
+import {
+  companies,
+  contacts,
+  demoUser,
+  jobs,
+  reminders,
+  roleTemplates,
+} from "@/lib/demo-data";
+import { getDashboardAnalytics } from "@/lib/analytics";
+import { getDemoUser } from "@/server/demo-user";
 
-const averageMatch = Math.round(
-  jobs.reduce((total, job) => total + job.matchScore, 0) / jobs.length
-);
+export const dynamic = "force-dynamic";
 
-export default function Home() {
-  const activeApplications = jobs.filter(
-    (job) => !["Saved", "Rejected", "Archived"].includes(job.stage)
-  ).length;
-  const interviews = jobs.filter((job) => job.stage.includes("Interview")).length;
+export default async function Home() {
+  const user = await getDemoUser();
+  const analytics = await getDashboardAnalytics(user.id);
 
   return (
     <main className="flex min-h-screen">
@@ -41,10 +46,13 @@ export default function Home() {
                 <Badge tone="blue">Seeded user</Badge>
                 <Badge tone="amber">Human-in-the-loop</Badge>
               </div>
-              <h1 className="mt-3 text-2xl font-bold tracking-normal">Job Search Command Center</h1>
+              <h1 className="mt-3 text-2xl font-bold tracking-normal">
+                Job Search Command Center
+              </h1>
               <p className="mt-1 max-w-3xl text-sm leading-6 text-muted-foreground">
-                Welcome back, {demoUser.name}. CareerOS is prioritizing the roles, contacts,
-                reminders, and AI review queues most likely to move your search forward.
+                Welcome back, {demoUser.name}. CareerOS is prioritizing the
+                roles, contacts, reminders, and AI review queues most likely to
+                move your search forward.
               </p>
             </div>
 
@@ -65,29 +73,29 @@ export default function Home() {
           <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
               label="Saved jobs"
-              value={String(jobs.length)}
-              helper="Across manual, CSV, pasted JD, and demo sources"
+              value={String(analytics.totalJobs)}
+              helper="Across manual, pasted JD, and demo sources"
               icon={BriefcaseBusiness}
               tone="blue"
             />
             <StatCard
               label="Active applications"
-              value={String(activeApplications)}
+              value={String(analytics.activeApplications)}
               helper="Roles currently moving through the CRM"
               icon={ClipboardCheck}
               tone="green"
             />
             <StatCard
               label="Interviews"
-              value={String(interviews)}
+              value={String(analytics.interviews)}
               helper="Prep packets should be reviewed this week"
               icon={Trophy}
               tone="amber"
             />
             <StatCard
               label="Average match"
-              value={`${averageMatch}%`}
-              helper="Mock AI scoring against the active profile"
+              value={`${analytics.averageMatchScore}%`}
+              helper="Persisted AI scoring against active profiles"
               icon={BarChart3}
               tone="neutral"
             />
@@ -101,8 +109,8 @@ export default function Home() {
                     <div>
                       <CardTitle>Application Pipeline</CardTitle>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Phase 1 preview of the Kanban workflow. Drag-and-drop movement comes in
-                        Phase 3.
+                        Phase 1 preview of the Kanban workflow. Drag-and-drop
+                        movement comes in Phase 3.
                       </p>
                     </div>
                     <Badge tone="blue">Solutions Engineer active</Badge>
@@ -119,7 +127,8 @@ export default function Home() {
                     <div>
                       <CardTitle>Job Inbox</CardTitle>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Jobs stay reviewable before any application or outreach action happens.
+                        Jobs stay reviewable before any application or outreach
+                        action happens.
                       </p>
                     </div>
                     <Badge tone="green">{jobs.length} jobs</Badge>
@@ -147,8 +156,12 @@ export default function Home() {
                     <div key={reminder.title} className="rounded-lg border p-3">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-sm font-medium">{reminder.title}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{reminder.type}</p>
+                          <p className="text-sm font-medium">
+                            {reminder.title}
+                          </p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            {reminder.type}
+                          </p>
                         </div>
                         <Badge tone="amber">{reminder.due}</Badge>
                       </div>
@@ -166,12 +179,19 @@ export default function Home() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {companies.map((company) => (
-                  <div key={company.name} className="flex items-center justify-between gap-3 border-b pb-3 last:border-0 last:pb-0">
+                  <div
+                    key={company.name}
+                    className="flex items-center justify-between gap-3 border-b pb-3 last:border-0 last:pb-0"
+                  >
                     <div>
                       <p className="text-sm font-medium">{company.name}</p>
-                      <p className="text-xs text-muted-foreground">{company.industry}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {company.industry}
+                      </p>
                     </div>
-                    <Badge tone={company.priority === "High" ? "green" : "neutral"}>
+                    <Badge
+                      tone={company.priority === "High" ? "green" : "neutral"}
+                    >
                       {company.priority}
                     </Badge>
                   </div>
@@ -185,12 +205,17 @@ export default function Home() {
               </CardHeader>
               <CardContent className="space-y-3">
                 {contacts.map((contact) => (
-                  <div key={contact.name} className="border-b pb-3 last:border-0 last:pb-0">
+                  <div
+                    key={contact.name}
+                    className="border-b pb-3 last:border-0 last:pb-0"
+                  >
                     <p className="text-sm font-medium">{contact.name}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {contact.title} at {contact.company}
                     </p>
-                    <p className="mt-2 text-xs text-muted-foreground">{contact.nextStep}</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {contact.nextStep}
+                    </p>
                   </div>
                 ))}
               </CardContent>
@@ -209,8 +234,8 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="mt-4 text-sm leading-6 text-muted-foreground">
-                  Templates seed Search Profiles with related titles, common skills, scoring hints,
-                  and interview topics.
+                  Templates seed Search Profiles with related titles, common
+                  skills, scoring hints, and interview topics.
                 </p>
               </CardContent>
             </Card>
